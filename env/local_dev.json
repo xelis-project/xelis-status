@@ -1,0 +1,5 @@
+{
+  "ENV": "dev",
+  "INDEX_REST_ENDPOINT": "http://localhost:8000",
+  "EXPLORER_LINK": "#"
+}

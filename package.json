@@ -1,0 +1,29 @@
+{
+  "name": "xelis-status",
+  "version": "0.1.0",
+  "description": "Network status for Xelis nodes",
+  "scripts": {
+    "make-lang": "node ./node_modules/g45-react/lang-dict.js --src ./src --outfile ./lang/en.json",
+    "bundle": "shx cp -n ./env/local_dev.json ./bundler-define.json && node ./node_modules/g45-react/bundler.js --entry ./src/routes.js",
+    "build-dev:cf": "npm run bundle -- --type cf_worker --watch --sourcemap",
+    "start-dev:cf": "npx wrangler pages dev ./dist/cf --port=3000 --live-reload",
+    "build-prod:cf": "npm run bundle -- --type cf_worker --minify",
+    "build-cf:testnet-pages": "npm run build-prod:cf -- --define ./env/cf_testnet.json",
+    "build-cf:mainnet-pages": "npm run build-prod:cf -- --define ./env/cf_mainnet.json",
+    "build": "npm run build-dev:cf",
+    "start": "npm run start-dev:cf"
+  },
+  "dependencies": {
+    "goober": "^2.1.10",
+    "react": "^18.2.0",
+    "react-helmet-async": "^1.3.0",
+    "react-router-dom": "^6.7.0",
+    "reset-css": "^5.0.2",
+    "xelis-explorer": "github:xelis-project/xelis-explorer"
+  },
+  "devDependencies": {
+    "g45-react": "^0.1.10",
+    "shx": "^0.3.4",
+    "wrangler": "^3.28.1"
+  }
+}

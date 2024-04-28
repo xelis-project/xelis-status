@@ -1,0 +1,5 @@
+{
+  "ENV": "mainnet",
+  "INDEX_REST_ENDPOINT": "https://index.xelis.io",
+  "EXPLORER_LINK": "https://explorer.xelis.io"
+}
