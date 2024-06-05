@@ -1,7 +1,7 @@
 import App from './app'
 
 import Layout from './layout/layout'
-import Home from './pages/home'
+import Home from './pages/home/index'
 
 const routes = [
   {

@@ -56,6 +56,10 @@ export default {
       padding: 1em;
       border-radius: .5em;
     `,
+    containerWithExtra: css`
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    `,
     title: css`
       font-size: 1.2em;
       margin-bottom: .5em;
@@ -80,6 +84,38 @@ export default {
       slow: css`background-color: yellow;`,
       alive: css`background-color: green;`,
       init: css`background-color: gray;`
-    }
+    },
+    extraInfo: css`
+      padding: 1em;
+      background: rgb(0 0 0 / 30%);
+      border-bottom-right-radius: .5em;
+      border-bottom-left-radius: .5em;
+    `
   },
+  nodeInfo: {
+    container: css`
+      display: flex;
+      gap: 1em;
+      flex-direction: column;
+      justify-content: space-between;
+
+      ${theme.query.minDesktop} {
+        flex-direction: row;
+      }
+    `,
+    item: {
+      container: css`
+        display: flex;
+        gap: .5em;
+        flex-direction: column;
+      `,
+      title: css`
+        opacity: .5;
+        white-space: nowrap;
+      `,
+      value: css`
+        word-break: break-all;
+      `
+    }
+  }
 }

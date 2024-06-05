@@ -2,6 +2,7 @@ import Icon from 'g45-react/components/fontawesome_icon'
 import { useLang } from 'g45-react/hooks/useLang'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import FlagIcon from 'xelis-explorer/src/components/flagIcon'
+import { RPC as DaemonRPC } from '@xelis/sdk/daemon/rpc'
 
 import style from './style'
 
@@ -12,27 +13,38 @@ function Home() {
   }, [])
 
   const [loadBalancers, setLoadBalancers] = useState([
-    { location: "Node Balancer #1", endpoint: "https://node.xelis.io", icon: <Icon name="server" /> },
+    { location: 'Node Balancer #1', endpoint: 'https://node.xelis.io', icon: <Icon name="server" /> },
   ])
 
   const [seedNodes, setSeedNodes] = useState([
-    { location: "US #1", endpoint: "https://us-node.xelis.io", icon: <FlagIcon code="us" /> },
-    { location: "France #1", endpoint: "https://fr-node.xelis.io", icon: <FlagIcon code="fr" /> },
-    { location: "Poland #1", endpoint: "https://pl-node.xelis.io", icon: <FlagIcon code="pl" /> },
-    { location: "Germany #1", endpoint: "https://de-node.xelis.io", icon: <FlagIcon code="de" /> },
-    { location: "Singapore #1", endpoint: "https://sg-node.xelis.io", icon: <FlagIcon code="sg" /> },
+    { location: 'US #1', endpoint: 'https://us-node.xelis.io', icon: <FlagIcon code="us" />, apiEndpoint: 'https://us-node.xelis.io/json_rpc' },
+    { location: 'France #1', endpoint: 'https://fr-node.xelis.io', icon: <FlagIcon code="fr" />, apiEndpoint: 'https://fr-node.xelis.io/json_rpc' },
+    { location: 'Poland #1', endpoint: 'https://pl-node.xelis.io', icon: <FlagIcon code="pl" />, apiEndpoint: 'https://pl-node.xelis.io/json_rpc' },
+    { location: 'Germany #1', endpoint: 'https://de-node.xelis.io', icon: <FlagIcon code="de" />, apiEndpoint: 'https://de-node.xelis.io/json_rpc' },
+    { location: 'Singapore #1', endpoint: 'https://sg-node.xelis.io', icon: <FlagIcon code="sg" />, apiEndpoint: 'https://sg-node.xelis.io/json_rpc' },
   ])
 
   const [indexers, setIndexers] = useState([
-    { location: "US #1", endpoint: "https://index.xelis.io", icon: <FlagIcon code="us" /> },
+    { location: 'US #1', endpoint: 'https://index.xelis.io', icon: <FlagIcon code='us' /> },
   ])
 
-  const checkEndpoint = useCallback(async (endpoint) => {
+  const checkEndpoint = useCallback(async (item) => {
+    const { endpoint, apiEndpoint } = item
+
     const start = Date.now()
     let success = false
     let err = null
+    let nodeInfo = null
+
     try {
-      await fetch(endpoint)
+      if (apiEndpoint) {
+        const daemon = new DaemonRPC(apiEndpoint)
+        const res = await daemon.getInfo()
+        nodeInfo = res.result
+      } else {
+        await fetch(endpoint)
+      }
+
       success = true
     } catch (e) {
       // failed
@@ -42,17 +54,21 @@ function Home() {
     const end = Date.now()
     const elapsed = end - start
 
-    return { endpoint, success, elapsed, err }
+    return { endpoint, success, elapsed, err, nodeInfo }
   }, [])
 
   const updateStatus = useCallback((items, setItemsState) => {
     items.forEach((item) => {
-      const { endpoint } = item
-      checkEndpoint(endpoint).then((res) => {
+      checkEndpoint(item).then((res) => {
         setItemsState((items) => {
           return items.map((item) => {
             if (item.endpoint == res.endpoint) {
-              return { ...item, status: res }
+              let extraInfo = null
+              if (res.nodeInfo) {
+                extraInfo = <NodeInfo {...res.nodeInfo} />
+              }
+
+              return { ...item, status: res, extraInfo }
             }
 
             return item
@@ -110,7 +126,7 @@ function Home() {
 }
 
 function StatusItem(props) {
-  const { location, endpoint, icon, status } = props
+  const { location, endpoint, icon, status, extraInfo } = props
 
   const statusType = useMemo(() => {
     if (!status) return `init`
@@ -128,17 +144,50 @@ function StatusItem(props) {
     return `dead`
   }, [status])
 
-  return <div className={style.statusItem.container}>
-    <div>
-      <div className={style.statusItem.title}>
-        {icon}
-        {location}
+  let containerStyle = style.statusItem.container
+  if (extraInfo) containerStyle += ` ${style.statusItem.containerWithExtra}`
+
+  return <div>
+    <div className={containerStyle}>
+      <div>
+        <div className={style.statusItem.title}>
+          {icon}
+          {location}
+        </div>
+        <a href={endpoint} target="_blank">{endpoint}</a>
       </div>
-      <div><a href={endpoint} target="_blank">{endpoint}</a></div>
+      <div>
+        <div className={style.statusItem.latency}>
+          {status && <>{status.elapsed} MS</>}
+          <div className={`${style.statusItem.dot.container} ${style.statusItem.dot[statusType]}`} />
+        </div>
+      </div>
     </div>
-    <div className={style.statusItem.latency}>
-      {status && <>{status.elapsed} MS</>}
-      <div className={`${style.statusItem.dot.container} ${style.statusItem.dot[statusType]}`} />
+    {extraInfo && <div className={style.statusItem.extraInfo}>
+      {extraInfo}
+    </div>}
+  </div>
+}
+
+function NodeInfo(props) {
+  const { top_block_hash, height, topoheight, version } = props
+
+  return <div className={style.nodeInfo.container}>
+    <div className={style.nodeInfo.item.container}>
+      <div className={style.nodeInfo.item.title}>Top Block</div>
+      <div className={style.nodeInfo.item.value}>{top_block_hash}</div>
+    </div>
+    <div className={style.nodeInfo.item.container}>
+      <div className={style.nodeInfo.item.title}>Height</div>
+      <div className={style.nodeInfo.item.value}>{height}</div>
+    </div>
+    <div className={style.nodeInfo.item.container}>
+      <div className={style.nodeInfo.item.title}>Topo Height</div>
+      <div className={style.nodeInfo.item.value}>{topoheight}</div>
+    </div>
+    <div className={style.nodeInfo.item.container}>
+      <div className={style.nodeInfo.item.title}>Version</div>
+      <div className={style.nodeInfo.item.value}>{version}</div>
     </div>
   </div>
 }
