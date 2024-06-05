@@ -3,6 +3,7 @@ import { useLang } from 'g45-react/hooks/useLang'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import FlagIcon from 'xelis-explorer/src/components/flagIcon'
 import { RPC as DaemonRPC } from '@xelis/sdk/daemon/rpc'
+import { Helmet } from 'react-helmet-async'
 
 import style from './style'
 
@@ -92,6 +93,10 @@ function Home() {
   }, [])
 
   return <div>
+    <Helmet>
+      <title>Home</title>
+      <meta name="description" content={description} />
+    </Helmet>
     <div className={style.header.container}>
       <div className={style.header.logo}></div>
       <h1 className={style.header.title}>XELIS Status</h1>
