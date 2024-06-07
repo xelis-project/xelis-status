@@ -2,7 +2,7 @@ import { Outlet } from 'react-router'
 import Background from 'xelis-explorer/src/layout/background'
 import { css } from 'goober'
 
-import { style as layoutStyle } from 'xelis-explorer/src/style/layout'
+import layoutStyle from 'xelis-explorer/src/style/layout'
 
 const style = {
   container: css`
@@ -13,8 +13,8 @@ const style = {
 function Layout() {
   return <div className={layoutStyle.container}>
     <Background />
-    <div className={layoutStyle.layoutFlex}>
-      <div className="layout-max-width">
+    <div className={layoutStyle.pageFlex}>
+      <div className={layoutStyle.pageMaxWidth}>
         <div className={style.container}>
           <Outlet />
         </div>
