@@ -106,23 +106,34 @@ function StatusItem(props) {
 
     const load = async () => {
       try {
+        let lastRequest = new Date()
         const daemon = new DaemonWS()
         daemon.maxConnectionTries = 0
+        daemon.timeout = 1000 // max timeout to avoid ui lag if node is not responding
 
         await daemon.connect(ws)
 
-        const loadInfo = async () => {
-          const start = new Date()
-          const info = await daemon.methods.getInfo()
-          setNodeInfo(info)
-          const end = new Date()
-          const elapsed = end - start
-          setElapsed(elapsed)
+        const loadInfo = async (overwrite) => {
+          try {
+            const start = new Date()
+            // if node is syncing this function can be called a lot
+            // so we wait for at least 1s before doing another request
+            if (!overwrite && start - lastRequest < 1000) return
+            lastRequest = start
+            const info = await daemon.methods.getInfo()
+            setNodeInfo(info)
+            const end = new Date()
+            const elapsed = end - start
+            setElapsed(elapsed)
+          } catch (err) {
+            setErr(err)
+            setStatus(`dead`)
+          }
         }
 
-        loadInfo()
+        loadInfo(true)
         daemon.methods.onNewBlock(async (event, data) => {
-          loadInfo()
+          loadInfo(false)
         })
       } catch (err) {
         setErr(err)
@@ -159,7 +170,7 @@ function StatusItem(props) {
       <div>
         <div className={style.statusItem.latency}>
           {(!err && elapsed) && <>{elapsed} MS</>}
-          {(err) && <>Failed</>}
+          {(err) && <>{err.message}</>}
           <div className={`${style.statusItem.dot.container} ${style.statusItem.dot[status]}`} />
         </div>
       </div>
