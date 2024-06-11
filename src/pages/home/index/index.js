@@ -13,89 +13,23 @@ function Home() {
     return `Quickly verify the status of official nodes by checking the colored dots for activity. If a node has been inactive for some time, reach out on Discord for assistance.`
   }, [])
 
-  const [loadBalancers, setLoadBalancers] = useState([
+  const loadBalancers = useMemo(() => [
     { location: 'Node Balancer #1', endpoint: 'https://node.xelis.io', icon: <Icon name="server" /> },
   ])
 
-  const [seedNodes, setSeedNodes] = useState([
-    { location: 'US #1', endpoint: 'https://us-node.xelis.io', icon: <FlagIcon code="us" />, apiEndpoint: 'wss://us-node.xelis.io/json_rpc' },
-    { location: 'France #1', endpoint: 'https://fr-node.xelis.io', icon: <FlagIcon code="fr" />, apiEndpoint: 'wss://fr-node.xelis.io/json_rpc' },
-    { location: 'Poland #1', endpoint: 'http://51.68.142.141:8080', icon: <FlagIcon code="pl" />, apiEndpoint: 'ws://51.68.142.141:8080/json_rpc' },
-    { location: 'Germany #1', endpoint: 'http://162.19.249.100:8080', icon: <FlagIcon code="de" />, apiEndpoint: 'ws://162.19.249.100:8080/json_rpc' },
-    { location: 'Singapore #1', endpoint: 'http://139.99.89.27:8080', icon: <FlagIcon code="sg" />, apiEndpoint: 'ws://139.99.89.27:8080/json_rpc' },
-    { location: 'United Kingdom #1', endpoint: 'http://51.195.220.137:8080', icon: <FlagIcon code="gb" />, apiEndpoint: 'ws://51.195.220.137:8080/json_rpc' },
-    { location: 'Canada #1', endpoint: 'http://66.70.179.137:8080', icon: <FlagIcon code="ca" />, apiEndpoint: 'ws://66.70.179.137:8080/json_rpc' },
+  const seedNodes = useMemo(() => [
+    { location: 'US #1', endpoint: 'https://us-node.xelis.io', icon: <FlagIcon code="us" />, ws: 'wss://us-node.xelis.io/json_rpc' },
+    { location: 'France #1', endpoint: 'https://fr-node.xelis.io', icon: <FlagIcon code="fr" />, ws: 'wss://fr-node.xelis.io/json_rpc' },
+    { location: 'Poland #1', endpoint: 'https://pl-node.xelis.io', icon: <FlagIcon code="pl" />, ws: 'wss://pl-node.xelis.io/json_rpc' },
+    { location: 'Germany #1', endpoint: 'https://de-node.xelis.io', icon: <FlagIcon code="de" />, ws: 'wss://de-node.xelis.io/json_rpc' },
+    { location: 'Singapore #1', endpoint: 'http://sg-node.xelis.io', icon: <FlagIcon code="sg" />, ws: 'wss://sg-node.xelis.io/json_rpc' },
+    { location: 'United Kingdom #1', endpoint: 'http://uk-node.xelis.io', icon: <FlagIcon code="gb" />, ws: 'wss://uk-node.xelis.io/json_rpc' },
+    { location: 'Canada #1', endpoint: 'http://ca-node.xelis.io', icon: <FlagIcon code="ca" />, ws: 'wss://ca-node.xelis.io/json_rpc' },
   ])
 
-  const [indexers, setIndexers] = useState([
+  const indexers = useMemo(() => [
     { location: 'US #1', endpoint: 'https://index.xelis.io', icon: <FlagIcon code='us' /> },
   ])
-
-  const checkEndpoint = useCallback(async (item) => {
-    const { endpoint, apiEndpoint } = item
-
-    const start = Date.now()
-    let success = false
-    let err = null
-    let nodeInfo = null
-
-    try {
-      if (apiEndpoint) {
-        const daemon = new DaemonWS()
-        daemon.maxConnectionTries = 0
-        await daemon.connect(apiEndpoint)
-        const res = await daemon.methods.getInfo()
-        nodeInfo = res
-        daemon.close()
-      } else {
-        await fetch(endpoint)
-      }
-
-      success = true
-    } catch (e) {
-      // failed
-      err = e
-    }
-
-    const end = Date.now()
-    const elapsed = end - start
-
-    return { endpoint, success, elapsed, err, nodeInfo }
-  }, [])
-
-  const updateStatus = useCallback((items, setItemsState) => {
-    items.forEach((item) => {
-      checkEndpoint(item).then((res) => {
-        setItemsState((items) => {
-          return items.map((item) => {
-            if (item.endpoint == res.endpoint) {
-              let extraInfo = null
-              if (res.nodeInfo) {
-                extraInfo = <NodeInfo {...res.nodeInfo} />
-              }
-
-              return { ...item, res, extraInfo }
-            }
-
-            return item
-          })
-        })
-      })
-    })
-  }, [])
-
-  useEffect(() => {
-    const updateRate = 60000 // 1min
-
-    const update = () => {
-      updateStatus(loadBalancers, setLoadBalancers)
-      updateStatus(seedNodes, setSeedNodes)
-      updateStatus(indexers, setIndexers)
-    }
-
-    update()
-    setInterval(update, updateRate)
-  }, [])
 
   return <div>
     <Helmet>
@@ -107,13 +41,13 @@ function Home() {
       <h1 className={style.header.title}>XELIS Status</h1>
       <div className={style.header.description}>{description}</div>
     </div>
-    <div>
+    {/*<div>
       <div className={style.statusList.title}>Load Balancers</div>
       <div className={style.statusList.description}>You can point your wallet / miner to this server. It redirects the request by offloading to other nodes.</div>
       <div className={style.statusList.items}>
         {loadBalancers.map((item) => <StatusItem key={item.endpoint} {...item} />)}
       </div>
-    </div>
+    </div>*/}
     <div>
       <div className={style.statusList.title}>Seed Nodes</div>
       <div className={style.statusList.description}>
@@ -136,26 +70,82 @@ function Home() {
 }
 
 function StatusItem(props) {
-  const { location, endpoint, icon, res, extraInfo } = props
+  const { location, endpoint, icon, ws } = props
 
-  const statusType = useMemo(() => {
-    if (!res) return `init`
+  const [elapsed, _setElapsed] = useState()
+  const [status, setStatus] = useState(`init`)
+  const [err, setErr] = useState()
+  const [nodeInfo, setNodeInfo] = useState()
 
-    const { success, elapsed } = res
+  const setElapsed = useCallback((elapsed) => {
+    _setElapsed(elapsed)
+    if (elapsed > 500) {
+      setStatus(`slow`)
+    } else {
+      setStatus(`alive`)
+    }
+  })
 
-    if (success) {
-      if (elapsed > 500) {
-        return `slow`
+  const checkEndpoint = useCallback(async () => {
+    try {
+      setErr(null)
+      const start = new Date()
+      await fetch(endpoint)
+      const end = new Date()
+      const elapsed = end - start
+      setElapsed(elapsed)
+    } catch (err) {
+      setErr(err)
+      setStatus(`dead`)
+    }
+  }, [endpoint])
+
+  // load websocket and refresh on new block
+  useEffect(() => {
+    if (!ws) return
+
+    const load = async () => {
+      try {
+        const daemon = new DaemonWS()
+        daemon.maxConnectionTries = 0
+
+        await daemon.connect(ws)
+
+        const loadInfo = async () => {
+          const start = new Date()
+          const info = await daemon.methods.getInfo()
+          setNodeInfo(info)
+          const end = new Date()
+          const elapsed = end - start
+          setElapsed(elapsed)
+        }
+
+        loadInfo()
+        daemon.methods.onNewBlock(async (event, data) => {
+          loadInfo()
+        })
+      } catch (err) {
+        setErr(err)
       }
-
-      return `alive`
     }
 
-    return `dead`
-  }, [res])
+    load()
+  }, [])
+
+  // fallback to loading api endpoind and reload every 60s
+  useEffect(() => {
+    if (ws) return
+
+    const reload = () => {
+      checkEndpoint()
+      setTimeout(reload, 60000)
+    }
+
+    reload()
+  }, [checkEndpoint])
 
   let containerStyle = style.statusItem.container
-  if (extraInfo) containerStyle += ` ${style.statusItem.containerWithExtra}`
+  if (nodeInfo) containerStyle += ` ${style.statusItem.containerWithNodeInfo}`
 
   return <div>
     <div className={containerStyle}>
@@ -168,14 +158,14 @@ function StatusItem(props) {
       </div>
       <div>
         <div className={style.statusItem.latency}>
-          {(res && res.success) && <>{res.elapsed} MS</>}
-          {(res && !res.success) && <>Failed</>}
-          <div className={`${style.statusItem.dot.container} ${style.statusItem.dot[statusType]}`} />
+          {(!err && elapsed) && <>{elapsed} MS</>}
+          {(err) && <>Failed</>}
+          <div className={`${style.statusItem.dot.container} ${style.statusItem.dot[status]}`} />
         </div>
       </div>
     </div>
-    {extraInfo && <div className={style.statusItem.extraInfo}>
-      {extraInfo}
+    {nodeInfo && <div className={style.statusItem.nodeInfo}>
+      <NodeInfo {...nodeInfo} />
     </div>}
   </div>
 }

@@ -56,7 +56,7 @@ export default {
       padding: 1em;
       border-radius: .5em;
     `,
-    containerWithExtra: css`
+    containerWithNodeInfo: css`
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
     `,
@@ -85,7 +85,7 @@ export default {
       alive: css`background-color: green;`,
       init: css`background-color: gray;`
     },
-    extraInfo: css`
+    nodeInfo: css`
       padding: 1em;
       background: rgb(0 0 0 / 30%);
       border-bottom-right-radius: .5em;
