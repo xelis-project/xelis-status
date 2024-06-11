@@ -2,7 +2,7 @@ import Icon from 'g45-react/components/fontawesome_icon'
 import { useLang } from 'g45-react/hooks/useLang'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import FlagIcon from 'xelis-explorer/src/components/flagIcon'
-import { RPC as DaemonRPC } from '@xelis/sdk/daemon/rpc'
+import { WS as DaemonWS } from '@xelis/sdk/daemon/websocket'
 import { Helmet } from 'react-helmet-async'
 
 import style from './style'
@@ -18,11 +18,13 @@ function Home() {
   ])
 
   const [seedNodes, setSeedNodes] = useState([
-    { location: 'US #1', endpoint: 'https://us-node.xelis.io', icon: <FlagIcon code="us" />, apiEndpoint: 'https://us-node.xelis.io/json_rpc' },
-    { location: 'France #1', endpoint: 'https://fr-node.xelis.io', icon: <FlagIcon code="fr" />, apiEndpoint: 'https://fr-node.xelis.io/json_rpc' },
-    { location: 'Poland #1', endpoint: 'https://pl-node.xelis.io', icon: <FlagIcon code="pl" />, apiEndpoint: 'https://pl-node.xelis.io/json_rpc' },
-    { location: 'Germany #1', endpoint: 'https://de-node.xelis.io', icon: <FlagIcon code="de" />, apiEndpoint: 'https://de-node.xelis.io/json_rpc' },
-    { location: 'Singapore #1', endpoint: 'https://sg-node.xelis.io', icon: <FlagIcon code="sg" />, apiEndpoint: 'https://sg-node.xelis.io/json_rpc' },
+    { location: 'US #1', endpoint: 'https://us-node.xelis.io', icon: <FlagIcon code="us" />, apiEndpoint: 'wss://us-node.xelis.io/json_rpc' },
+    { location: 'France #1', endpoint: 'https://fr-node.xelis.io', icon: <FlagIcon code="fr" />, apiEndpoint: 'wss://fr-node.xelis.io/json_rpc' },
+    { location: 'Poland #1', endpoint: 'http://51.68.142.141:8080', icon: <FlagIcon code="pl" />, apiEndpoint: 'ws://51.68.142.141:8080/json_rpc' },
+    { location: 'Germany #1', endpoint: 'http://162.19.249.100:8080', icon: <FlagIcon code="de" />, apiEndpoint: 'ws://162.19.249.100:8080/json_rpc' },
+    { location: 'Singapore #1', endpoint: 'http://139.99.89.27:8080', icon: <FlagIcon code="sg" />, apiEndpoint: 'ws://139.99.89.27:8080/json_rpc' },
+    { location: 'United Kingdom #1', endpoint: 'http://51.195.220.137:8080', icon: <FlagIcon code="gb" />, apiEndpoint: 'ws://51.195.220.137:8080/json_rpc' },
+    { location: 'Canada #1', endpoint: 'http://66.70.179.137:8080', icon: <FlagIcon code="ca" />, apiEndpoint: 'ws://66.70.179.137:8080/json_rpc' },
   ])
 
   const [indexers, setIndexers] = useState([
@@ -39,9 +41,12 @@ function Home() {
 
     try {
       if (apiEndpoint) {
-        const daemon = new DaemonRPC(apiEndpoint)
-        const res = await daemon.getInfo()
-        nodeInfo = res.result
+        const daemon = new DaemonWS()
+        daemon.maxConnectionTries = 0
+        await daemon.connect(apiEndpoint)
+        const res = await daemon.methods.getInfo()
+        nodeInfo = res
+        daemon.close()
       } else {
         await fetch(endpoint)
       }
@@ -69,7 +74,7 @@ function Home() {
                 extraInfo = <NodeInfo {...res.nodeInfo} />
               }
 
-              return { ...item, status: res, extraInfo }
+              return { ...item, res, extraInfo }
             }
 
             return item
@@ -80,7 +85,7 @@ function Home() {
   }, [])
 
   useEffect(() => {
-    const updateRate = 30000 // 30s
+    const updateRate = 60000 // 1min
 
     const update = () => {
       updateStatus(loadBalancers, setLoadBalancers)
@@ -131,12 +136,12 @@ function Home() {
 }
 
 function StatusItem(props) {
-  const { location, endpoint, icon, status, extraInfo } = props
+  const { location, endpoint, icon, res, extraInfo } = props
 
   const statusType = useMemo(() => {
-    if (!status) return `init`
+    if (!res) return `init`
 
-    const { success, elapsed } = status
+    const { success, elapsed } = res
 
     if (success) {
       if (elapsed > 500) {
@@ -147,7 +152,7 @@ function StatusItem(props) {
     }
 
     return `dead`
-  }, [status])
+  }, [res])
 
   let containerStyle = style.statusItem.container
   if (extraInfo) containerStyle += ` ${style.statusItem.containerWithExtra}`
@@ -163,7 +168,8 @@ function StatusItem(props) {
       </div>
       <div>
         <div className={style.statusItem.latency}>
-          {status && <>{status.elapsed} MS</>}
+          {(res && res.success) && <>{res.elapsed} MS</>}
+          {(res && !res.success) && <>Failed</>}
           <div className={`${style.statusItem.dot.container} ${style.statusItem.dot[statusType]}`} />
         </div>
       </div>
@@ -184,11 +190,11 @@ function NodeInfo(props) {
     </div>
     <div className={style.nodeInfo.item.container}>
       <div className={style.nodeInfo.item.title}>Height</div>
-      <div className={style.nodeInfo.item.value}>{height}</div>
+      <div className={style.nodeInfo.item.value}>{height.toLocaleString()}</div>
     </div>
     <div className={style.nodeInfo.item.container}>
       <div className={style.nodeInfo.item.title}>Topo Height</div>
-      <div className={style.nodeInfo.item.value}>{topoheight}</div>
+      <div className={style.nodeInfo.item.value}>{topoheight.toLocaleString()}</div>
     </div>
     <div className={style.nodeInfo.item.container}>
       <div className={style.nodeInfo.item.title}>Version</div>
