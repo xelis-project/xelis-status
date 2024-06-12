@@ -3,8 +3,7 @@
 A simple page to display official seed nodes API endpoint status.
 This includes a latency marker and node information like height, topo, version...
 
-Mainnet: <https://status.xelis.io>
-Testnet: <https://testnet-status.xelis.io>
+Mainnet: <https://status.xelis.io>  
 
 ## Development
 

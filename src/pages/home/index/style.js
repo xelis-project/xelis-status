@@ -82,7 +82,8 @@ export default {
       `,
       dead: css`background-color: red;`,
       slow: css`background-color: yellow;`,
-      alive: css`background-color: green;`,
+      slower: css`background-color: orange;`,
+      best: css`background-color: green;`,
       init: css`background-color: gray;`
     },
     nodeInfo: css`

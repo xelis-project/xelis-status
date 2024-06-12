@@ -10,7 +10,7 @@ import style from './style'
 function Home() {
   const { t } = useLang()
   const description = useMemo(() => {
-    return `Quickly verify the status of official nodes by checking the colored dots for activity. If a node has been inactive for some time, reach out on Discord for assistance.`
+    return `Quickly verify the status of official nodes by checking the colored dots for latency. If a node has been inactive for some time, reach out on Discord for assistance.`
   }, [])
 
   const loadBalancers = useMemo(() => [
@@ -18,13 +18,13 @@ function Home() {
   ])
 
   const seedNodes = useMemo(() => [
-    { location: 'US #1', endpoint: 'https://us-node.xelis.io', icon: <FlagIcon code="us" />, ws: 'wss://us-node.xelis.io/json_rpc' },
-    { location: 'France #1', endpoint: 'https://fr-node.xelis.io', icon: <FlagIcon code="fr" />, ws: 'wss://fr-node.xelis.io/json_rpc' },
-    { location: 'Poland #1', endpoint: 'https://pl-node.xelis.io', icon: <FlagIcon code="pl" />, ws: 'wss://pl-node.xelis.io/json_rpc' },
-    { location: 'Germany #1', endpoint: 'https://de-node.xelis.io', icon: <FlagIcon code="de" />, ws: 'wss://de-node.xelis.io/json_rpc' },
-    { location: 'Singapore #1', endpoint: 'https://sg-node.xelis.io', icon: <FlagIcon code="sg" />, ws: 'wss://sg-node.xelis.io/json_rpc' },
-    { location: 'United Kingdom #1', endpoint: 'https://uk-node.xelis.io', icon: <FlagIcon code="gb" />, ws: 'wss://uk-node.xelis.io/json_rpc' },
-    { location: 'Canada #1', endpoint: 'https://ca-node.xelis.io', icon: <FlagIcon code="ca" />, ws: 'wss://ca-node.xelis.io/json_rpc' },
+    { location: 'US #1', endpoint: 'https://us-node.xelis.io', icon: <FlagIcon code="us" />, wsEndpoint: 'wss://us-node.xelis.io/json_rpc' },
+    { location: 'France #1', endpoint: 'https://fr-node.xelis.io', icon: <FlagIcon code="fr" />, wsEndpoint: 'wss://fr-node.xelis.io/json_rpc' },
+    { location: 'Poland #1', endpoint: 'https://pl-node.xelis.io', icon: <FlagIcon code="pl" />, wsEndpoint: 'wss://pl-node.xelis.io/json_rpc' },
+    { location: 'Germany #1', endpoint: 'https://de-node.xelis.io', icon: <FlagIcon code="de" />, wsEndpoint: 'wss://de-node.xelis.io/json_rpc' },
+    { location: 'Singapore #1', endpoint: 'https://sg-node.xelis.io', icon: <FlagIcon code="sg" />, wsEndpoint: 'wss://sg-node.xelis.io/json_rpc' },
+    { location: 'United Kingdom #1', endpoint: 'https://uk-node.xelis.io', icon: <FlagIcon code="gb" />, wsEndpoint: 'wss://uk-node.xelis.io/json_rpc' },
+    { location: 'Canada #1', endpoint: 'https://ca-node.xelis.io', icon: <FlagIcon code="ca" />, wsEndpoint: 'wss://ca-node.xelis.io/json_rpc' },
   ])
 
   const indexers = useMemo(() => [
@@ -70,21 +70,27 @@ function Home() {
 }
 
 function StatusItem(props) {
-  const { location, endpoint, icon, ws } = props
+  const { location, endpoint, icon, wsEndpoint } = props
 
-  const [elapsed, _setElapsed] = useState()
-  const [status, setStatus] = useState(`init`)
+  const [elapsed, setElapsed] = useState()
   const [err, setErr] = useState()
   const [nodeInfo, setNodeInfo] = useState()
 
-  const setElapsed = useCallback((elapsed) => {
-    _setElapsed(elapsed)
-    if (elapsed > 500) {
-      setStatus(`slow`)
-    } else {
-      setStatus(`alive`)
+  const status = useMemo(() => {
+    if (err) return `dead`
+
+    if (elapsed) {
+      if (elapsed > 200) {
+        return `slower`
+      } else if (elapsed > 100) {
+        return `slow`
+      } else {
+        return `best`
+      }
     }
-  })
+
+    return `init`
+  }, [elapsed, err])
 
   const checkEndpoint = useCallback(async () => {
     try {
@@ -96,29 +102,28 @@ function StatusItem(props) {
       setElapsed(elapsed)
     } catch (err) {
       setErr(err)
-      setStatus(`dead`)
     }
   }, [endpoint])
 
   // load websocket and refresh on new block
   useEffect(() => {
-    if (!ws) return
+    if (!wsEndpoint) return
 
     const load = async () => {
       try {
-        let lastRequest = new Date()
+        let lastRequest = null
         const daemon = new DaemonWS()
-        daemon.maxConnectionTries = 0
+        daemon.maxConnectionTries = 1
         daemon.timeout = 1000 // max timeout to avoid ui lag if node is not responding
 
-        await daemon.connect(ws)
+        await daemon.connect(wsEndpoint)
 
-        const loadInfo = async (overwrite) => {
+        const loadInfo = async () => {
           try {
-            const start = new Date()
             // if node is syncing this function can be called a lot
             // so we wait for at least 1s before doing another request
-            if (!overwrite && start - lastRequest < 1000) return
+            const start = new Date()
+            if (lastRequest && start - lastRequest < 1000) return
             lastRequest = start
             const info = await daemon.methods.getInfo()
             setNodeInfo(info)
@@ -127,13 +132,26 @@ function StatusItem(props) {
             setElapsed(elapsed)
           } catch (err) {
             setErr(err)
-            setStatus(`dead`)
           }
         }
 
-        loadInfo(true)
-        daemon.methods.onNewBlock(async (event, data) => {
-          loadInfo(false)
+        daemon.socket.addEventListener(`open`, (e) => {
+          setElapsed(null)
+          setErr(null)
+        })
+
+        daemon.socket.addEventListener(`error`, (e) => {
+          console.log(`error`, e)
+          setErr(new Error(`error`))
+        })
+
+        daemon.socket.addEventListener(`close`, (e) => {
+          setErr(new Error(`closed`))
+        })
+
+        loadInfo()
+        await daemon.methods.onNewBlock(async (event, data) => {
+          loadInfo()
         })
       } catch (err) {
         setErr(err)
@@ -143,9 +161,9 @@ function StatusItem(props) {
     load()
   }, [])
 
-  // fallback to loading api endpoind and reload every 60s
+  // fallback to loading api endpoint and reload every 60s
   useEffect(() => {
-    if (ws) return
+    if (wsEndpoint) return
 
     const reload = () => {
       checkEndpoint()
