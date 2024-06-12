@@ -22,9 +22,9 @@ function Home() {
     { location: 'France #1', endpoint: 'https://fr-node.xelis.io', icon: <FlagIcon code="fr" />, ws: 'wss://fr-node.xelis.io/json_rpc' },
     { location: 'Poland #1', endpoint: 'https://pl-node.xelis.io', icon: <FlagIcon code="pl" />, ws: 'wss://pl-node.xelis.io/json_rpc' },
     { location: 'Germany #1', endpoint: 'https://de-node.xelis.io', icon: <FlagIcon code="de" />, ws: 'wss://de-node.xelis.io/json_rpc' },
-    { location: 'Singapore #1', endpoint: 'http://sg-node.xelis.io', icon: <FlagIcon code="sg" />, ws: 'wss://sg-node.xelis.io/json_rpc' },
-    { location: 'United Kingdom #1', endpoint: 'http://uk-node.xelis.io', icon: <FlagIcon code="gb" />, ws: 'wss://uk-node.xelis.io/json_rpc' },
-    { location: 'Canada #1', endpoint: 'http://ca-node.xelis.io', icon: <FlagIcon code="ca" />, ws: 'wss://ca-node.xelis.io/json_rpc' },
+    { location: 'Singapore #1', endpoint: 'https://sg-node.xelis.io', icon: <FlagIcon code="sg" />, ws: 'wss://sg-node.xelis.io/json_rpc' },
+    { location: 'United Kingdom #1', endpoint: 'https://uk-node.xelis.io', icon: <FlagIcon code="gb" />, ws: 'wss://uk-node.xelis.io/json_rpc' },
+    { location: 'Canada #1', endpoint: 'https://ca-node.xelis.io', icon: <FlagIcon code="ca" />, ws: 'wss://ca-node.xelis.io/json_rpc' },
   ])
 
   const indexers = useMemo(() => [
