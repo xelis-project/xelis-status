@@ -1,5 +1,6 @@
 import { css } from 'goober'
 import theme from 'xelis-explorer/src/style/theme'
+import { logoBgUrl } from 'xelis-explorer/src/layout/header'
 
 export default {
   header: {
@@ -16,7 +17,7 @@ export default {
       display: block;
       background-size: contain;
       background-repeat: no-repeat;
-      background-image: ${theme.apply({ xelis: `url('public/img/white_background_black_logo.svg')`, light: `url('public/img/black_background_white_logo.svg')`, dark: `url('public/img/white_background_black_logo.svg')`, })};
+      background-image: ${logoBgUrl};
     `,
     title: css`
       font-size: 2.5em;
