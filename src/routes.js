@@ -1,11 +1,11 @@
-import App from './app'
+import App from 'xelis-explorer/src/app'
 
 import Layout from './layout/layout'
 import Home from './pages/home'
 
 const routes = [
   {
-    element: <App />,
+    element: <App title="XELIS Status" />,
     children: [
       {
         element: <Layout />,
