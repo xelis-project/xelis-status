@@ -126,7 +126,6 @@ function StatusItem(props) {
             if (lastRequest && start - lastRequest < 1000) return
             lastRequest = start
             const info = await daemon.methods.getInfo()
-            console.log(info)
             setNodeInfo(info)
             const end = new Date()
             const elapsed = end - start
