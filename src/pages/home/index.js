@@ -126,6 +126,7 @@ function StatusItem(props) {
             if (lastRequest && start - lastRequest < 1000) return
             lastRequest = start
             const info = await daemon.methods.getInfo()
+            console.log(info)
             setNodeInfo(info)
             const end = new Date()
             const elapsed = end - start
@@ -200,7 +201,7 @@ function StatusItem(props) {
 }
 
 function NodeInfo(props) {
-  const { top_block_hash, height, topoheight, version } = props
+  const { top_block_hash, height, topoheight, stableheight, version } = props
 
   return <div className={style.nodeInfo.container}>
     <div className={style.nodeInfo.item.container}>
@@ -210,6 +211,10 @@ function NodeInfo(props) {
     <div className={style.nodeInfo.item.container}>
       <div className={style.nodeInfo.item.title}>Height</div>
       <div className={style.nodeInfo.item.value}>{height.toLocaleString()}</div>
+    </div>
+    <div className={style.nodeInfo.item.container}>
+      <div className={style.nodeInfo.item.title}>Stable Height</div>
+      <div className={style.nodeInfo.item.value}>{stableheight.toLocaleString()}</div>
     </div>
     <div className={style.nodeInfo.item.container}>
       <div className={style.nodeInfo.item.title}>Topo Height</div>
