@@ -27,6 +27,14 @@ export default {
       max-width: 27em;
       text-align: center;
       opacity: .9;
+    `,
+    allNodeCheck: css`
+      background-color: ${theme.apply({ xelis: `rgb(0 0 0 / 50%)`, dark: `rgb(0 0 0 / 50%)`, light: `rgb(255 255 255 / 50%)` })};
+      padding: .5em 1em;
+      border-radius: .5em;
+      display: flex;
+      gap: 1em;
+      align-items: center;
     `
   },
   statusList: {
@@ -41,9 +49,14 @@ export default {
       color: var(--muted-color);
     `,
     items: css`
-    display: flex;
-    gap: 1em;
-    flex-direction: column;
+      display: flex;
+      gap: 1em;
+      flex-direction: column;
+
+      ${theme.query.minLarge} { 
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
     `
   },
   statusItem: {

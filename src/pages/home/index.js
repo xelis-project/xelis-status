@@ -1,5 +1,6 @@
 import Icon from 'g45-react/components/fontawesome_icon'
 import { useLang } from 'g45-react/hooks/useLang'
+import DotLoading from 'g45-react/components/dot_loading'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import FlagIcon from 'xelis-explorer/src/components/flagIcon'
 import { WS as DaemonWS } from '@xelis/sdk/daemon/websocket'
@@ -15,7 +16,7 @@ function Home() {
 
   const loadBalancers = useMemo(() => [
     { location: 'Node Balancer #1', endpoint: 'https://node.xelis.io', icon: <Icon name="server" /> },
-  ])
+  ], [])
 
   const seedNodes = useMemo(() => [
     { location: 'US #1', endpoint: 'https://us-node.xelis.io', icon: <FlagIcon code="us" />, wsEndpoint: 'wss://us-node.xelis.io/json_rpc' },
@@ -25,11 +26,13 @@ function Home() {
     { location: 'Singapore #1', endpoint: 'https://sg-node.xelis.io', icon: <FlagIcon code="sg" />, wsEndpoint: 'wss://sg-node.xelis.io/json_rpc' },
     { location: 'United Kingdom #1', endpoint: 'https://uk-node.xelis.io', icon: <FlagIcon code="gb" />, wsEndpoint: 'wss://uk-node.xelis.io/json_rpc' },
     { location: 'Canada #1', endpoint: 'https://ca-node.xelis.io', icon: <FlagIcon code="ca" />, wsEndpoint: 'wss://ca-node.xelis.io/json_rpc' },
-  ])
+  ], [])
 
   const indexers = useMemo(() => [
     { location: 'US #1', endpoint: 'https://index.xelis.io', icon: <FlagIcon code='us' /> },
-  ])
+  ], [])
+
+  const [nodeStatus, setNodeStatus] = useState({})
 
   return <div>
     <Helmet>
@@ -40,6 +43,7 @@ function Home() {
       <div className={style.header.logo}></div>
       <h1 className={style.header.title}>XELIS Status</h1>
       <div className={style.header.description}>{description}</div>
+      <AllNodeStatus totalNodes={seedNodes.length} nodeStatus={nodeStatus} />
     </div>
     {/*<div>
       <div className={style.statusList.title}>Load Balancers</div>
@@ -56,7 +60,7 @@ function Home() {
         Choose one with the best latency.
       </div>
       <div className={style.statusList.items}>
-        {seedNodes.map((item) => <StatusItem key={item.endpoint} {...item} />)}
+        {seedNodes.map((item) => <StatusItem key={item.endpoint} {...item} setStatus={setNodeStatus} />)}
       </div>
     </div>
     <div>
@@ -69,15 +73,71 @@ function Home() {
   </div>
 }
 
-function StatusItem(props) {
-  const { location, endpoint, icon, wsEndpoint } = props
+function AllNodeStatus(props) {
+  const { totalNodes, nodeStatus } = props
 
-  const [elapsed, setElapsed] = useState()
-  const [err, setErr] = useState()
+  const [deadNodes, setDeadNodes] = useState(0)
+
+  const allNodeStatus = useMemo(() => {
+    let live = 0, dead = 0
+
+    Object.keys(nodeStatus).forEach((key) => {
+      const status = nodeStatus[key]
+      if (status === `dead`) dead++
+      if (status === `live`) live++
+    })
+
+    if (live === totalNodes) return `online`
+    if (dead === totalNodes) return `offline`
+    if (live + dead === totalNodes) {
+      setDeadNodes(dead)
+      return `incomplete`
+    }
+
+    return `waiting`
+  }, [totalNodes, nodeStatus])
+
+  return <div className={style.header.allNodeCheck}>
+    {allNodeStatus === `online` && <>
+      All nodes are fully operational
+      <div className={`${style.statusItem.dot.container} ${style.statusItem.dot['best']}`} />
+    </>}
+    {allNodeStatus === `incomplete` && <>
+      A few nodes are currently down ({deadNodes})
+      <div className={`${style.statusItem.dot.container} ${style.statusItem.dot['slow']}`} />
+    </>}
+    {allNodeStatus === `offline` && <>
+      All nodes are offline
+      <div className={`${style.statusItem.dot.container} ${style.statusItem.dot['dead']}`} />
+    </>}
+    {allNodeStatus === `waiting` && <>
+      Loading<DotLoading />
+      <div className={`${style.statusItem.dot.container} ${style.statusItem.dot['init']}`} />
+    </>}
+  </div>
+}
+
+function StatusItem(props) {
+  const { location, endpoint, icon, wsEndpoint, setStatus } = props
+
   const [nodeInfo, setNodeInfo] = useState()
 
+  const [elapsed, _setElapsed] = useState()
+  const setElapsed = useCallback((elapsed) => {
+    if (elapsed && typeof setStatus === `function`) setStatus(s => ({ ...s, [location]: `live` }))
+    _setElapsed(elapsed)
+  }, [setStatus])
+
+  const [err, _setErr] = useState()
+  const setErr = useCallback((err) => {
+    if (err && typeof setStatus === `function`) setStatus(s => ({ ...s, [location]: `dead` }))
+    _setErr(err)
+  }, [setStatus])
+
   const status = useMemo(() => {
-    if (err) return `dead`
+    if (err) {
+      return `dead`
+    }
 
     if (elapsed) {
       if (elapsed > 200) {
@@ -103,7 +163,7 @@ function StatusItem(props) {
     } catch (err) {
       setErr(err)
     }
-  }, [endpoint])
+  }, [endpoint, setErr, setElapsed])
 
   // load websocket and refresh on new block
   useEffect(() => {
@@ -159,13 +219,13 @@ function StatusItem(props) {
     }
 
     load()
-  }, [])
+  }, [setErr, setElapsed])
 
   // fallback to loading api endpoint and reload every 60s
   useEffect(() => {
     if (wsEndpoint) return
 
-    const reload = () => {
+    const reload = async () => {
       checkEndpoint()
       setTimeout(reload, 60000)
     }
@@ -174,7 +234,7 @@ function StatusItem(props) {
   }, [checkEndpoint])
 
   let containerStyle = style.statusItem.container
-  if (nodeInfo) containerStyle += ` ${style.statusItem.containerWithNodeInfo}`
+  if (nodeInfo || err) containerStyle += ` ${style.statusItem.containerWithNodeInfo}`
 
   return <div>
     <div className={containerStyle}>
@@ -188,11 +248,13 @@ function StatusItem(props) {
       <div>
         <div className={style.statusItem.latency}>
           {(!err && elapsed) && <>{elapsed} MS</>}
-          {(err) && <>{err.message}</>}
           <div className={`${style.statusItem.dot.container} ${style.statusItem.dot[status]}`} />
         </div>
       </div>
     </div>
+    {(err) && <div className={style.statusItem.nodeInfo}>
+      {err.message}
+    </div>}
     {nodeInfo && <div className={style.statusItem.nodeInfo}>
       <NodeInfo {...nodeInfo} />
     </div>}
