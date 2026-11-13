@@ -1,4 +1,4 @@
 node_modules
-dist
 .wrangler
-bundler-define.json
+dist
+.dev.vars

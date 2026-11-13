@@ -1,19 +1,30 @@
 # XELIS Status
 
-A simple page to display official seed nodes API endpoint status.
-This includes a latency marker and node information like height, topo, version...
+A small, dependency-free status page for the official Xelis seed nodes.
 
-Mainnet: <https://status.xelis.io>  
+It polls each node's JSON-RPC endpoint (`get_info`) every few seconds, shows the
+round-trip latency with a colored marker, and displays live chain information
+(height, stable height, topo height, version and network).
+
+## Nodes
+
+- US #1 — `https://us-node.xelis.io` (`wss://us-node.xelis.io/json_rpc`)
+- France #1 — `https://fr-node.xelis.io` (`wss://fr-node.xelis.io/json_rpc`)
 
 ## Development
 
-For development this app uses the `g45-react` package to bundle and serve app.
-Simply run `npm start` to build, start the dev server and watch modified files automatically.
-For environment variables, it will create a `bundler-define.json` file and check in the `env` folder.  
+The site is static HTML, CSS and vanilla JavaScript under `public/`. No runtime
+libraries are used.
+
+```sh
+npm install
+npm run dev      # wrangler dev
+```
 
 ## Production
 
-The app is served by cloudflare and uses `cf_build.sh` to build from a specific branch.
-Pushing branch `testnet-pages` or `mainnet-pages` will automatically build and deploy to cloudflare.
+Deployed as a Cloudflare Worker serving static assets:
 
-To build for nodejs run `npm run build-prod:node`.
+```sh
+npm run deploy   # wrangler deploy
+```

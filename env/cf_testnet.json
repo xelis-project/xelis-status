@@ -1,5 +1,0 @@
-{
-  "ENV": "testnet",
-  "INDEX_REST_ENDPOINT": "https://testnet-index.xelis.io",
-  "EXPLORER_LINK": "https://testnet-explorer.xelis.io"
-}
