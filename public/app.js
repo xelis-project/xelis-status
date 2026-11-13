@@ -74,6 +74,7 @@
         stat("Version", "version", "dim") +
         stat("Network", "network", "dim") +
         stat("Difficulty", "difficulty", "dim") +
+        stat("Net Hash", "nethash", "wide") +
       "</div>" +
       '<div class="node-error" hidden></div>' +
     "</article>";
@@ -95,6 +96,22 @@
   function fmt(value) {
     var n = Number(value);
     return Number.isFinite(n) ? n.toLocaleString("en-US") : "—";
+  }
+
+  function fmtHash(n) {
+    if (!Number.isFinite(n) || n <= 0) return "—";
+    var units = [
+      [1e15, "PH/s"], [1e12, "TH/s"], [1e9, "GH/s"],
+      [1e6, "MH/s"], [1e3, "kH/s"], [1, "H/s"],
+    ];
+    for (var i = 0; i < units.length; i++) {
+      var d = units[i][0];
+      if (n >= d) {
+        var v = n / d;
+        return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + " " + units[i][1];
+      }
+    }
+    return n.toFixed(2) + " H/s";
   }
 
   var grid = document.getElementById("node-grid");
@@ -195,6 +212,11 @@
     setField(card, "version", info.version || "—");
     setField(card, "network", info.network || "—");
     setField(card, "difficulty", info.difficulty != null ? String(info.difficulty) : "—");
+
+    var difficulty = Number(info.difficulty);
+    var blockTime = Number(info.average_block_time) > 0 ? Number(info.average_block_time) / 1000 : 0;
+    var netHash = blockTime > 0 && Number.isFinite(difficulty) ? difficulty / blockTime : null;
+    setField(card, "nethash", fmtHash(netHash));
 
     nodesState[index] = "live";
   }
